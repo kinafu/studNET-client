@@ -11,18 +11,18 @@ edit_credentials() {
         if [ -z $studnetNr ]; then
                 echo "Please enter your StudNET tenant number/Mieternummer and press [ENTER]: "
                 stty -echo
-                read -r $studnetNr
+                read -r studnetNr
         fi
 
         if [ -z $studnetPass ]; then
                 echo "Please enter your password for the studNET Client and press [ENTER]: "
                 stty -echo
-                read -r $studnetPass
+                read -r studnetPass
         fi
-        if [ -z $studnetPass ]; then
-                echo "Please enter your password for the studNET Client and press [ENTER]: "
+        if [ -z $studnetPass ] && [ $1 = 1 ]; then
+                echo "Please enter the studNET authentification server IP adress and press [ENTER]: "
                 stty -echo
-                read -r $studnetPass
+                read -r studnetServerIP
         fi
         stty echo
 }
@@ -51,9 +51,9 @@ else
         echo "Please type [y]/n and press [ENTER]: "
         read -r choice
         case "$choice" in 
-          y|Y ) edit_credentials;;
+          y|Y ) edit_credentials 1;;
           n|N ) ;;
-            * ) edit_credentials;;
+            * ) edit_credentials 1;;
         esac
 fi
 
