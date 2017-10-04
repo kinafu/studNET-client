@@ -46,8 +46,8 @@ sudo apt-get -y install sshpass
 #sudo ufw allow 22
 #sudo ufw enable
 
-echo "Testing Studnet Client Login once"
-if sshpass -p $studnetPass ssh -q -o StrictHostKeyChecking=no $studnetNr@$studnetServerIP exit ;
+echo "Now testing Studnet Client Login once"
+if sshpass -p $studnetPass ssh -q -o StrictHostKeyChecking=no -o ConnectTimeout=5 $studnetNr@$studnetServerIP exit ;
 then
         echo "Successfully logged in."
 else
