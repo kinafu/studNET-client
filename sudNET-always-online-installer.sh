@@ -62,21 +62,30 @@ fi
 
 
 # fail2ban
-sudo apt-get install fail2ban
-sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
-sudo service fail2ban restart
+#sudo apt-get install fail2ban
+#sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+#sudo service fail2ban restart
 
 # watchdog
-sudo apt-get install watchdog
-sudo modprobe bcm2835_wdt
-echo "bcm2835_wdt" | sudo tee -a /etc/modules
+echo "Are you using a raspberry pi?"
+echo "Please type y/[n] and press [ENTER]:
+        case "$choice" in 
+          y|Y ) sudo apt-get install watchdog
+                sudo modprobe bcm2835_wdt
+                echo "bcm2835_wdt" | sudo tee -a /etc/modules
+                # edit watchdog config through uncommenting lines
+                sudo sed -i '/^#.*max-load-1/s/^#//' /etc/watchdog.conf
+                sudo sed -i '/^#.*watchdog-device/s/^#//' /etc/watchdog.conf
+                # add watchdog to startup applications
+                sudo systemctl enable watchdog
+                sudo service watchdog start
+                ;;
+          n|N ) ;;
+            * ) echo "Could not handle your answer, assuming you are not using a raspi."
+                ;;
+        esac
 
-# edit watchdog config through uncommenting lines
-sudo sed -i '/^#.*max-load-1/s/^#//' /etc/watchdog.conf
-sudo sed -i '/^#.*watchdog-device/s/^#//' /etc/watchdog.conf
-# add watchdog to startup applications
-sudo systemctl enable watchdog
-sudo service watchdog start
+
 
 # studnet .sh script
 sudo touch /usr/local/bin/studnet.sh 
@@ -110,6 +119,6 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-# activate auto updates
+# activate auto system updates
 sudo apt-get -y install unattended-upgrades apt-listchanges
 sudo dpkg-reconfigure --priority=low unattended-upgrades
