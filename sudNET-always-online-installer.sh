@@ -30,6 +30,10 @@ edit_credentials() {
 #ask for login credentials, if not entered at the beginning of the script
 edit_credentials
 
+echo "Please make sure, your machine is connected to the internet. The script will download requiered packages."
+echo "Press [ENTER] to continue."
+read -r blah
+
 # update OS
 sudo apt-get update 
 sudo apt-get -y dist-upgrade 
