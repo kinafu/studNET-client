@@ -30,6 +30,18 @@ edit_credentials() {
 #ask for login credentials, if not entered at the beginning of the script
 edit_credentials
 
+# update OS
+sudo apt-get update 
+sudo apt-get -y dist-upgrade 
+
+# install sshpass
+sudo apt-get -y install sshpass 
+
+# firewall
+#sudo apt-get -y install ufw
+#sudo ufw allow 22
+#sudo ufw enable
+
 echo "Testing Studnet Client Login once"
 if sshpass -p $studnetPass ssh -q -o StrictHostKeyChecking=no $studnetNr@$studnetServerIP exit ;
 then
@@ -45,17 +57,7 @@ else
         esac
 fi
 
-# update OS
-sudo apt-get update 
-sudo apt-get -y dist-upgrade 
 
-# install nohup and sshpass
-sudo apt-get -y install sshpass 
-
-# firewall
-#sudo apt-get -y install ufw
-#sudo ufw allow 22
-#sudo ufw enable
 
 # fail2ban
 sudo apt-get install fail2ban
