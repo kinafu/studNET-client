@@ -10,7 +10,6 @@ studnetServerIP="139.18.143.253"
 edit_credentials() {
         if [ -z $studnetNr ]; then
                 echo "Please enter your StudNET tenant number/Mieternummer and press [ENTER]: "
-                stty -echo
                 read -r studnetNr
         fi
 
@@ -18,13 +17,12 @@ edit_credentials() {
                 echo "Please enter your password for the studNET Client and press [ENTER]: "
                 stty -echo
                 read -r studnetPass
+                stty echo
         fi
         if [ -z $studnetPass ] && [ $1 = 1 ]; then
                 echo "Please enter the studNET authentification server IP adress and press [ENTER]: "
-                stty -echo
                 read -r studnetServerIP
         fi
-        stty echo
 }
 
 #ask for login credentials, if not entered at the beginning of the script
