@@ -8,30 +8,38 @@ studnetPass=""
 # be careful
 studnetServerIP="139.18.143.253"
 
+#install routine, do not change lines below
+
 edit_studnetNr() {
-  echo "StudNET tenant number/Mieternummer: "
-  read -r studnetNr
+	echo "StudNET tenant number/Mieternummer: "
+	read -r studnetNr
 }
 edit_studnetPass() {
-  echo "StudNET password: "
-  stty -echo	#posix compliant replacement for read -s
-  read -r studnetPass
-  stty echo
+	echo "StudNET password: "
+	stty -echo	#posix compliant replacement for read -s
+	read -r studnetPass
+	stty echo
 }
 edit_studnetServerIP() {
-  echo "Only change this, if you obtained a different IP from the user manual."
-  echo "Instruction manual from the Studentenwerk may also be found online."
-  echo "Enter StudNET Server IP or just press [ENTER] to skip."
-  read -r temp
-  case "$temp" in
-    "\n" ) ;;
-    * ) studnetServerIP="$temp";;
-  esac
+	echo "Only change this, if you obtained a different IP from the user manual."
+	echo "Instruction manual from the Studentenwerk may also be found online."
+	echo "Enter StudNET Server IP or just press [ENTER] to skip."
+	read -r temp
+	case "$temp" in
+	"\n" ) ;;
+	* ) studnetServerIP="$temp";;
+	esac
+}
+connect_studnet() {
+	sshpass -p $studnetPass \
+	ssh -q -t -t -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
+		$studnetNr@$studnetServerIP \
+		> /dev/null &  #starting ssh in background
 }
 
 
 if [ "$(id -u)" -ne 0 ]; then
-	echo "Sorry, you need to run this as root"
+	echo "Sorry, you need to run the installer as root"
 	exit 1
 fi
 
@@ -46,13 +54,13 @@ elif [ -e /etc/arch-release ]; then
 else
 	echo "Looks like you are not running this installer on a Debian, Ubuntu, CentOS or ArchLinux system."
 	echo "No problem, just make sure you have installed ssh and sshpass."
-	echo "Are ssh and sshpass installed on your system? Please type [y]es/[n]o and press [ENTER]: "
+	echo "Are ssh and sshpass installed on your system? Please type [y]es or [n]o and press [ENTER]: "
 	read -r choice
-        case "$choice" in
-          y|Y|Yes|yes ) ;;
-          n|N ) echo "Leaving now." && exit 4;;
-            * ) ;;
-        esac
+  case "$choice" in
+	y|Y|Yes|yes ) ;;
+	n|N ) echo "Leaving now." && exit 4;;
+	  * ) ;;
+  esac
 fi
 
 #ask for login credentials, if not entered at the beginning of the script
@@ -60,13 +68,12 @@ fi
 [ -z $studnetPass ] && edit_studnetPass;
 [ -z $studnetServerIP ] && edit_studnetServerIP;
 
-echo "Now I will test the connection. "
+echo "Now I will test the connection with StudNET Server. "
 echo "Press [Enter] to continue."
 read -r choice
 
-echo "Now testing Studnet Client Login once..."
 # "ping" StudNET Server to check basical connection
-while ! (nc -z $studnetServerIP 22); do
+while ! nc -z $studnetServerIP 22; do
   echo "Cannot reach StudNET server. Make sure you're connected to the right LAN port in your appartment."
   echo "Only one out of the two works."
   echo "Check your network settings on the router or on your device."
@@ -78,124 +85,137 @@ while ! (nc -z $studnetServerIP 22); do
   echo ""
   read -r choice
   case "$choice" in
-    y|Y|Yes|yes ) ;;
-    ip|\"ip\"|\"ip\". ) edit_studnetServerIP ;;
-    *) echo "Leaving now." && exit 4;;
+	y|Y|Yes|yes )
+		;;
+	ip|\"ip\"|\"ip\". )
+		edit_studnetServerIP ;;
+	*)
+		echo "Leaving now." && exit 4
   esac
 done
 
 # login at StudNET server
-while (
-sshpass -p $studnetNr \
-ssh -q -t -t -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-    $studnetPass@$studnetServerIP \
-    > /dev/null &  #starting ssh in background
-pid=$!
-sleep 4
-ps -p $pid >/dev/null
-return_code=$?  #if ssh session still running exitcode 0, connection should have been succesful
-kill $pid >/dev/null 2>&1
-[ ! $return_code ] ) do
+return_code=0
+while ([ "$return_code" -eq 0 ]) do
+	connect_studnet
+	pid=$!  #getting pid of ssh
+	# evaluate connection (is alive?)
+	sleep 4
+	ps -p $pid >/dev/null
+	return_code=$?  #if ssh session still alive exitcode 0, ssh process found, connection should have been succesful
+	kill $pid >/dev/null 2>&1
 
- echo "\n"
- echo "Wwrong password/username."
- echo "To try again press [Enter]."
- echo "To ignore unsucessful login type \"ignore\""
- read -r choice
- case "$choice" in
-   ignore|\"ignore\"|no|n|N)   ;;
-   * )                         edit_studnetNr
-                               edit_studnetPass
-                               ;;
- esac
+  if  [ "$return_code" -gt 0 ]; then
+	echo "\n"
+	echo "Wrong password/username."
+	echo "To try again press [Enter]."
+	echo "To ignore unsucessful login type \"ignore\""
+	read -r choice
+	case "$choice" in
+	 ignore|\"ignore\"|no|n|N)
+		choice="ignore"
+		;;
+	 * )
+		edit_studnetNr
+		edit_studnetPass
+		;;
+	esac
+  fi
 done
 
-echo "Successfully logged in."
-echo "The script will now update the installed packages and download required packages."
+if [ "$choice" != "ignore" ]; then
+  echo "Successfully logged in."
+fi
+
+echo "We will now update your installed packages and download new required packages."
 
 #connecting to StudNET server for internet for downloads
-sshpass -p $studnetPass \
-ssh -q -t -t -o StrictHostKeyChecking=no -o ConnectTimeout=5 \
-    $studnetNr@$studnetServerIP \
-    > /dev/null &  #starting ssh in background
+connect_studnet
 pid=$!
 
-echo "Press [ENTER] to continue."
-read -r choice
 
 #determine raspberry pi
 if [ "$(cat /proc/cpuinfo | grep 'Hardware' | awk '{print $3}')" = "BCM2835" ]; then
-  raspi="true"
-  #add watchdog package to download list
-  additional_packages="watchdog"
+	raspi="true"
+	#add watchdog package to download list
+	additional_packages="watchdog"
 fi
 
 #install packages
 return_code=0
-if ps -p $pid >/dev/null; then  #if ssh still connected/ if "everything fine" :)
+if ! ps -p $pid >/dev/null; then
+	# if ssh still connected/ if "everything fine" :)
+	echo "no connection via StudNET"
+	exit 4
+else
+	case "$OS" in
+		'debian' )
+			apt-get update && apt-get dist-upgrade
+			apt-get install openssh-client sshpass ca-certificates curl unattended-upgrades $additional_packages -y
+			return_code="$?"
 
-  if [ "$OS" = 'debian' ]; then
-    apt-get update && apt-get dist-upgrade
-    apt-get install openssh-client sshpass ca-certificates curl unattended-upgrades $additional_packages -y
-    [ "$?" -ne $return_code ] && return_code="$?"
-    #enable auto updates
-    if [ $return_code -eq 0 ]; then
-      sudo dpkg-reconfigure --priority=low unattended-upgrades #automatically install security updates for the OS (not for StudNET client)
-    fi
-  elif [ "$OS" = 'arch' ]; then
-    pacman -Syu openssh sshpass ca-certificates curl $additional_packages --needed --noconfirm
-    [ "$?" -ne $return_code ] && return_code="$?"
+			#enable auto updates
+			sudo dpkg-reconfigure --priority=low unattended-upgrades #automatically install security updates for the OS (not for StudNET client)
+			if [ "$return_code" -gt 0 ]; then
+				echo "Installing required packages failed. Aborting..."
+				exit 4
+			fi
+			;;
+		'arch' )
+			pacman -Syu openssh sshpass ca-certificates curl $additional_packages --needed --noconfirm
+			[ "$?" -ne $return_code ] && return_code="$?"
+			;;
+		'centos'|'fedora' )
+			dnf update -y
+			dnf install openssh-clients sshpass ca-certificates curl dnf-automatic $additional_packages -y
+			return_code="$?"
+			#enable auto updates
+			if [ $return_code -eq 0 ]; then
+			  if [ "$( cat /etc/fedora-release | awk '{print $3}' )" -le 25 ]; then
+					systemctl enable dnf-automatic.timer
+			  fi
+				if [ "$( cat /etc/fedora-release | awk '{print $3}' )" -ge 26 ]; then
+					systemctl enable dnf-automatic-install.timer
+				fi
+			fi
+			if [ "$(service yum-updatesd status > /dev/null)" -eq 0 ]; then
+				return_code=1
+				echo "Outdated auto update system detected. (yum-updates)"
+				echo "Please migrate to dnf-automatic."
+			fi
+			if [ "$return_code" -gt 0 ]; then
+				echo "Installing required packages failed. Aborting..."
+				exit 4
+			fi
 
-  elif [ "$OS" = 'centos' ] || [ "$OS" = 'fedora' ]; then
-    dnf update -y
-    dnf install openssh-clients sshpass ca-certificates curl dnf-automatic $additional_packages -y
-    [ "$?" -ne $return_code ] && return_code="$?"
-    #enable auto updates
-    if [ "$(service yum-updatesd status > /dev/null)" -eq 0 ]; then
-      echo "Outdated auto update system detected. (yum-updates)"
-      echo "Please migrate to dnf-automatic."
-      return_code=1
-    fi
-    if [ $return_code -eq 0 ]; then
-      if [ "$( cat /etc/fedora-release | awk '{print $3}' )" -le 25 ]; then
-        systemctl enable dnf-automatic.timer
-      fi
-    if [ "$( cat /etc/fedora-release | awk '{print $3}' )" -ge 26 ]; then
-      systemctl enable dnf-automatic-install.timer
-    fi
-  fi
+		;;
+	esac
 fi
 kill $pid >/dev/null #kill ssh, which we needed for internet for downloads
 
-else
-  echo "no connection via StudNET"
-  exit 4;
-fi
-
 # firewall allow outgoing, should be standard,
-# only needed, if you think, you messed around with firewall (which shouldn't be necessary :)
+# following lines only needed, if you think, you messed around with firewall (which shouldn't be necessary :)
 
 #sudo apt-get -y install ufw
 #sudo ufw default allow outgoing
 #sudo ufw enable
 
-# watchdog to autostart in case of system crash
+# watchdog to autostart in case of system crash (only for raspi)
 
 if [ $raspi = true ]; then
-  echo "\n"
-  echo "Installing kernel module, in order to restart raspi at crucial crashes."
-  modprobe bcm2835_wdt
-  echo "bcm2835_wdt" | sudo tee -a /etc/modules
-  # edit watchdog config through uncommenting lines
-  sed -i '/^#.*max-load-1/s/^#//' /etc/watchdog.conf
-  sed -i '/^#.*watchdog-device/s/^#//' /etc/watchdog.conf
-  # add watchdog to startup applications
-  systemctl enable watchdog
-  service watchdog start
+	echo "\n"
+	echo "Installing kernel module, in order to restart raspi at crucial crashes."
+	modprobe bcm2835_wdt
+	echo "bcm2835_wdt" | sudo tee -a /etc/modules
+	# edit watchdog config through uncommenting lines
+	sed -i '/^#.*max-load-1/s/^#//' /etc/watchdog.conf
+	sed -i '/^#.*watchdog-device/s/^#//' /etc/watchdog.conf
+	# add watchdog to startup applications
+	systemctl enable watchdog
+	service watchdog start
 fi
 
-
-# studnet .sh script
+# write studnet .sh script with individual username and password
 touch /usr/local/bin/studnet.sh
 sudo chmod u+rwx /usr/local/bin/studnet.sh
 
@@ -204,22 +224,22 @@ cat <<'EOF' | sudo tee /usr/local/bin/studnet.sh > /dev/null
 HOST=https://bing.com
 
 while true; do
-        while ! (curl --head --silent --connect-timeout 2 --cert-status "$HOST"  > /dev/null && sleep 10); do #if 'ping' unsuccesful attempt to reconnect
-                echo "Pinging $HOST was unsucessful." >2
-                echo "Reconnecting now"
-                kill %1 > /dev/null 2>&1
-                sleep 3
+	while ! (curl --head --silent --connect-timeout 2 --cert-status "$HOST"  > /dev/null && sleep 10); do #if 'ping' unsuccesful attempt to reconnect
+			echo "Pinging $HOST was unsucessful." >2
+			echo "Reconnecting now"
+			kill %1 > /dev/null 2>&1
+			sleep 3
 EOF
 echo "sshpass -p $studnetPass ssh -t -t -o StrictHostKeyChecking=no $studnetNr@$studnetServerIP &" | sudo tee -a /usr/local/bin/studnet.sh > /dev/null
 cat <<'EOF' | sudo tee -a /usr/local/bin/studnet.sh > /dev/null
-                sleep 2
-        done
+				sleep 2
+		done
 done
 EOF
 
 # create studnet service daemon, with autostart on system startup
 touch /etc/systemd/system/studnet.service
-
+# write service file, which executes studnet.sh script
 cat <<'EOF' | sudo tee /etc/systemd/system/studnet.service > /dev/null
 [Unit]
 Description=StudNET permanent login
@@ -234,6 +254,7 @@ StandardError=journal
 [Install]
 WantedBy=multi-user.target
 EOF
+
 systemctl daemon-reload
 systemctl enable studnet.service
-service studnet start && echo "StudNET Client up and running. You may go ahead. Everything works automatically."
+service studnet start && echo "StudNET Client up and running. You may go ahead. Auto-Login is turned on."
