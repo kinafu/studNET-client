@@ -224,7 +224,7 @@ cat <<'EOF' | sudo tee /usr/local/bin/studnet.sh > /dev/null
 HOST=https://bing.com
 
 while true; do
-	while ! (curl --head --silent --connect-timeout 2 --cert-status "$HOST"  > /dev/null && sleep 10); do #if 'ping' unsuccesful attempt to reconnect
+	while ! (curl --head --silent --connect-timeout 2 "$HOST"  > /dev/null && sleep 10); do #if 'ping' unsuccesful attempt to reconnect
 			echo "Pinging $HOST was unsucessful." >2
 			echo "Reconnecting now"
 			kill %1 > /dev/null 2>&1
