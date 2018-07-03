@@ -210,6 +210,10 @@ if [ $raspi = true ]; then
 	# edit watchdog config through uncommenting lines
 	sed -i '/^#.*max-load-1/s/^#//' /etc/watchdog.conf
 	sed -i '/^#.*watchdog-device/s/^#//' /etc/watchdog.conf
+	# fix bug in Raspbian stretch
+	if [ "$(lsb_release -a 2>/dev/null | grep raspbian 2> /dev/null 1>&2)" = true ]; then
+		"WantedBy=multi-user.target" >> /lib/systemd/system/watchdog.service
+	fi
 	# add watchdog to startup applications
 	systemctl enable watchdog
 	service watchdog start
