@@ -74,22 +74,25 @@ read -r choice
 
 # "ping" StudNET Server to check basical connection
 while ! nc -z -w 4 $studnetServerIP 22; do
-  echo "Cannot reach StudNET server. Make sure you're connected to the right LAN port in your appartment."
-  echo "Only one out of the two works."
-  echo "Check your network settings on the router or on your device."
-  echo "You need to configure standard gateway, IP adress and so ON YOUR OWN."
+  echo "Cannot reach StudNET server."
+  echo "- Make sure you're connected to the right LAN port in your appartment."
+  echo "  In each room only ONE of the two available LAN ports work."
+  echo "- Check your network settings on the router or on your device."
+  echo "- You need to configure standard gateway, DHCP, ... ON YOUR OWN."
+  echo "  This has to be done in the router's settings, if you are using one."
+  echo "- It's possible, that the StudNET Server IP changed."
   echo ""
-  echo "It's also possible, that the StudNET Server IP changed."
-  echo "To re-attempt connection, type [y]es. To enter a new Server IP type \"ip\"."
-  echo "Otherwise type [N]o."
+  echo "To re-attempt connection, press [ENTER]. 
+  echo "To enter a new Server IP type \"ip\"."
+  echo "Otherwise type \"exit\"."
   echo ""
   read -r choice
   case "$choice" in
-	y|Y|Yes|yes )
-		;;
+	#y|Y|Yes|yes )
+	#	;;
 	ip|\"ip\"|\"ip\". )
 		edit_studnetServerIP ;;
-	*)
+	exit)
 		echo "Leaving now." && exit 4
   esac
 done
