@@ -26,7 +26,7 @@ edit_studnetServerIP() {
 	echo "Enter StudNET Server IP or just press [ENTER] to skip."
 	read -r temp
 	case "$temp" in
-	"\n" ) ;;
+	"" ) ;;
 	* ) studnetServerIP="$temp";;
 	esac
 }
@@ -82,16 +82,15 @@ while ! nc -z -w 4 $studnetServerIP 22; do
   echo "  This has to be done in the router's settings, if you are using one."
   echo "- It's possible, that the StudNET Server IP changed."
   echo ""
-  echo "To re-attempt connection, press [ENTER]. 
-  echo "To enter a new Server IP type \"ip\"."
-  echo "Otherwise type \"exit\"."
-  echo ""
+  echo "To re-attempt connection, press [ENTER]."
+  echo "To change the servers IP, type \"ip\"."
+  echo "To exit for the moment, type \"exit\"."
   read -r choice
   case "$choice" in
 	#y|Y|Yes|yes )
 	#	;;
 	ip|\"ip\"|\"ip\". )
-		edit_studnetServerIP ;;
+		echo "" && edit_studnetServerIP ;;
 	exit)
 		echo "Leaving now." && exit 4
   esac
