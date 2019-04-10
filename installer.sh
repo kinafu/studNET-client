@@ -73,7 +73,7 @@ echo "Press [Enter] to continue."
 read -r choice
 
 # "ping" StudNET Server to check basical connection
-while ! nc -z $studnetServerIP 22; do
+while ! nc -z -w 4 $studnetServerIP 22; do
   echo "Cannot reach StudNET server. Make sure you're connected to the right LAN port in your appartment."
   echo "Only one out of the two works."
   echo "Check your network settings on the router or on your device."
