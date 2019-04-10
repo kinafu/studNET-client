@@ -1,4 +1,4 @@
-# studNET-always-online
+# studNET-client
 Install the client on a machine running Linux. A low-power client like the Raspberry Pi is recommended.
 If you want to stay signed on in StudNET 24/7, the client must be online (=powered on) 24/7, too.
 
